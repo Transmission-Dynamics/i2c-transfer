@@ -6,6 +6,10 @@
     "install": "node-gyp rebuild"
   },
   "gypfile": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Transmission-Dynamics/i2c-transfer.git"
+  },
   "directories": {
     "example": "examples"
   },
