@@ -1,0 +1,19 @@
+{
+  "name": "@transmission-dynamics/i2c-transfer",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "install": "node-gyp rebuild"
+  },
+  "gypfile": true,
+  "directories": {
+    "example": "examples"
+  },
+  "keywords": [],
+  "author": "Transmission Dynamics",
+  "license": "MIT",
+  "description": "Simple I2C transfer for Node.js",
+  "dependencies": {
+    "bindings": "^1.5.0"
+  }
+}
