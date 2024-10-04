@@ -61,8 +61,9 @@ void ExecuteI2CTransfer(napi_env env, void *data)
   ssize_t bytes_read = read(file, async_data->read_data, async_data->read_length);
   if (bytes_read != (ssize_t)async_data->read_length)
   {
-    free(async_data->read_data);
     close(file);
+    free(async_data->read_data);
+    async_data->read_data = NULL;
     async_data->error_message = strdup("Failed to read from the I2C device");
     return;
   }
