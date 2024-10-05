@@ -1,6 +1,6 @@
 {
   "name": "@transmission-dynamics/i2c-transfer",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "main": "index.js",
   "scripts": {
     "install": "node-gyp rebuild"
