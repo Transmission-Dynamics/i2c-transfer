@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <linux/i2c-dev.h>
+#include <linux/i2c.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -27,44 +28,43 @@ void ExecuteI2CTransfer(napi_env env, void *data)
 
   // Open the I2C bus
   int file = open(async_data->bus, O_RDWR);
-  if (file < 0)
-  {
+  if (file < 0) {
     async_data->error_message = strdup("Failed to open the I2C bus");
     return;
   }
 
-  // Set the slave address
-  if (ioctl(file, I2C_SLAVE, async_data->addr) < 0)
-  {
-    close(file);
-    async_data->error_message = strdup("Failed to set slave address");
-    return;
-  }
-
-  // Write data to the I2C device
-  ssize_t bytes_written = write(file, async_data->write_data, async_data->write_length);
-  if (bytes_written != (ssize_t)async_data->write_length)
-  {
-    close(file);
-    async_data->error_message = strdup("Failed to write to the I2C device");
-    return;
-  }
-
-  // Read data from the I2C device
   async_data->read_data = (uint8_t *)malloc(async_data->read_length);
-  if (async_data->read_data == NULL)
-  {
+  if (async_data->read_data == NULL) {
     close(file);
     async_data->error_message = strdup("Memory allocation failed");
     return;
   }
-  ssize_t bytes_read = read(file, async_data->read_data, async_data->read_length);
-  if (bytes_read != (ssize_t)async_data->read_length)
-  {
+
+  struct i2c_msg msgs[] = {
+    {
+      .addr  = async_data->addr,
+      .flags = 0,
+      .len   = async_data->write_length,
+      .buf   = async_data->write_data,
+    },
+    {
+      .addr  = async_data->addr,
+      .flags = I2C_M_RD,
+      .len   = async_data->read_length,
+      .buf   = async_data->read_data,
+    }
+  };
+
+  struct i2c_rdwr_ioctl_data rdwr = {
+    .msgs = msgs,
+    .nmsgs = 2,
+  };
+
+  // Send the ioctl command
+  int rdwr_result = ioctl(file, I2C_RDWR, &rdwr);
+  if (rdwr_result < 0) {
     close(file);
-    free(async_data->read_data);
-    async_data->read_data = NULL;
-    async_data->error_message = strdup("Failed to read from the I2C device");
+    async_data->error_message = strdup("Failed to transfer I2C data");
     return;
   }
 
@@ -75,8 +75,7 @@ void CompleteI2CTransfer(napi_env env, napi_status status, void *data)
 {
   async_data_t *async_data = (async_data_t *)data;
 
-  if (async_data->error_message == NULL)
-  {
+  if (async_data->error_message == NULL) {
     // No error, resolve the promise with the read data
     napi_value result;
     status = napi_create_buffer_copy(env, async_data->read_length, async_data->read_data, NULL, &result);
@@ -84,9 +83,7 @@ void CompleteI2CTransfer(napi_env env, napi_status status, void *data)
 
     status = napi_resolve_deferred(env, async_data->deferred, result);
     assert(status == napi_ok);
-  }
-  else
-  {
+  } else {
     // Error occurred, reject the promise
     napi_value error;
     status = napi_create_string_utf8(env, async_data->error_message, NAPI_AUTO_LENGTH, &error);
@@ -117,8 +114,7 @@ napi_value I2CTransferAsync(napi_env env, napi_callback_info info)
   status = napi_get_cb_info(env, info, &argc, argv, NULL, NULL);
   assert(status == napi_ok);
 
-  if (argc != 4)
-  {
+  if (argc != 4) {
     napi_throw_error(env, NULL, "Expected 4 arguments");
     return NULL;
   }
@@ -133,8 +129,7 @@ napi_value I2CTransferAsync(napi_env env, napi_callback_info info)
   bus_length += 1; // For null terminator
   async_data->bus = (char *)malloc(bus_length);
   status = napi_get_value_string_utf8(env, argv[0], async_data->bus, bus_length, NULL);
-  if (status != napi_ok)
-  {
+  if (status != napi_ok) {
     free(async_data->bus);
     free(async_data);
     napi_throw_type_error(env, NULL, "I2C bus must be a string");
@@ -143,8 +138,7 @@ napi_value I2CTransferAsync(napi_env env, napi_callback_info info)
 
   // Argument 1: Slave address
   status = napi_get_value_int32(env, argv[1], &async_data->addr);
-  if (status != napi_ok)
-  {
+  if (status != napi_ok) {
     free(async_data->bus);
     free(async_data);
     napi_throw_type_error(env, NULL, "Slave address must be a number");
@@ -155,8 +149,7 @@ napi_value I2CTransferAsync(napi_env env, napi_callback_info info)
   bool is_buffer;
   status = napi_is_buffer(env, argv[2], &is_buffer);
   assert(status == napi_ok);
-  if (!is_buffer)
-  {
+  if (!is_buffer) {
     free(async_data->bus);
     free(async_data);
     napi_throw_type_error(env, NULL, "Write data must be a buffer");
@@ -172,8 +165,7 @@ napi_value I2CTransferAsync(napi_env env, napi_callback_info info)
 
   // Argument 3: Read length
   status = napi_get_value_uint32(env, argv[3], &async_data->read_length);
-  if (status != napi_ok)
-  {
+  if (status != napi_ok) {
     free(async_data->bus);
     free(async_data->write_data);
     free(async_data);
