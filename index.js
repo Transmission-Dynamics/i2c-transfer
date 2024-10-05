@@ -1,5 +1,5 @@
-const addon = require('bindings')('i2c_transfer');
+const addon = require('bindings')('i2cTransfer');
 
 module.exports = {
-  i2c_transfer: addon.i2c_transfer,
+  i2cTransfer: addon.i2cTransfer,
 };

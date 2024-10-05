@@ -11,7 +11,7 @@ declare module '@transmission-dynamics/i2c-transfer' {
    * @returns A Promise that resolves with a Buffer containing the data read from the I2C device.
    * @throws An error if the I2C operation fails.
    */
-  export function i2c_transfer(
+  export function i2cTransfer(
     bus: string,
     addr: number,
     writeBuffer: Buffer | Uint8Array,

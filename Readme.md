@@ -11,7 +11,7 @@ npm install @transmission-dynamics/i2c-transfer
 ## Usage
 
 ```js
-const { i2c_transfer } = require('@transmission-dynamics/i2c-transfer');
+const { i2cTransfer } = require('@transmission-dynamics/i2c-transfer');
 
 (async () => {
   try {
@@ -20,7 +20,7 @@ const { i2c_transfer } = require('@transmission-dynamics/i2c-transfer');
     const writeBuffer = new Uint8Array([0x04]); // Data to write
     const readSize = 3;       // Number of bytes to read
 
-    const readBuffer = await i2c_transfer(bus, addr, writeBuffer, readSize);
+    const readBuffer = await i2cTransfer(bus, addr, writeBuffer, readSize);
 
     console.log('Data read from I2C device:', readBuffer);
   } catch (err) {
@@ -31,7 +31,7 @@ const { i2c_transfer } = require('@transmission-dynamics/i2c-transfer');
 
 ## Description
 
-The i2c_transfer function allows you to perform an I2C write followed by a read operation asynchronously. It communicates with I2C devices by writing data to a specified register or command and then reading the response.
+The i2cTransfer function allows you to perform an I2C write followed by a read operation asynchronously. It communicates with I2C devices by writing data to a specified register or command and then reading the response.
 
 ### Parameters
 
@@ -48,7 +48,7 @@ The i2c_transfer function allows you to perform an I2C write followed by a read 
 
 - Permissions: Ensure your user has the necessary permissions to access the I2C bus device (e.g., /dev/i2c-1). You may need to run your script with elevated privileges or adjust the device permissions.
 - Error Handling: The function throws errors if any I2C operation fails. Use try-catch blocks to handle exceptions.
-- Asynchronous Operation: The i2c_transfer function is asynchronous and returns a Promise, allowing you to use async/await syntax.
+- Asynchronous Operation: The i2cTransfer function is asynchronous and returns a Promise, allowing you to use async/await syntax.
 
 ## License
 

@@ -1,4 +1,3 @@
-// i2c_transfer.c
 #include <node_api.h>
 #include <assert.h>
 #include <string.h>
@@ -201,7 +200,7 @@ napi_value Init(napi_env env, napi_value exports)
   status = napi_create_function(env, NULL, 0, I2CTransferAsync, NULL, &fn);
   assert(status == napi_ok);
 
-  status = napi_set_named_property(env, exports, "i2c_transfer", fn);
+  status = napi_set_named_property(env, exports, "i2cTransfer", fn);
   assert(status == napi_ok);
 
   return exports;
