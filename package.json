@@ -1,6 +1,6 @@
 {
   "name": "@transmission-dynamics/i2c-transfer",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "main": "index.js",
   "scripts": {
     "install": "node scripts/install.js",
@@ -21,6 +21,7 @@
     "src/**",
     "binding.gyp",
     "Dockerfile",
+    "i2c-transfer-addon.js",
     "index.js",
     "index.d.ts",
     "package.json",
