@@ -5,7 +5,8 @@
   "scripts": {
     "install": "node scripts/install.js",
     "prebuild": "prebuildify --napi --strip",
-    "release": "node scripts/prebuild.js"
+    "release": "node scripts/prebuild.js",
+    "publish": "npm publish --access public"
   },
   "gypfile": true,
   "repository": {
