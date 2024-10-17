@@ -1,6 +1,6 @@
 {
   "name": "@transmission-dynamics/i2c-transfer",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "main": "index.js",
   "scripts": {
     "install": "node scripts/install.js",

@@ -8,8 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-typedef struct
-{
+typedef struct {
   napi_async_work work;
   napi_deferred deferred;
   char *bus;
@@ -21,90 +20,26 @@ typedef struct
   char *error_message;
 } async_data_t;
 
-void ExecuteI2CTransfer(napi_env env, void *data)
-{
-  async_data_t *async_data = (async_data_t *)data;
+static void ExecuteI2CTransfer(napi_env env, void *data);
+static void CompleteI2CTransfer(napi_env env, napi_status status, void *data);
+static napi_value I2CTransferAsync(napi_env env, napi_callback_info info);
 
-  // Open the I2C bus
-  int file = open(async_data->bus, O_RDWR);
-  if (file < 0) {
-    async_data->error_message = strdup("Failed to open the I2C bus");
-    return;
-  }
+napi_value Init(napi_env env, napi_value exports) {
+  napi_status status;
+  napi_value fn;
 
-  async_data->read_data = (uint8_t *)malloc(async_data->read_length);
-  if (async_data->read_data == NULL) {
-    close(file);
-    async_data->error_message = strdup("Memory allocation failed");
-    return;
-  }
+  status = napi_create_function(env, NULL, 0, I2CTransferAsync, NULL, &fn);
+  assert(status == napi_ok);
 
-  struct i2c_msg msgs[] = {
-    {
-      .addr  = async_data->addr,
-      .flags = 0,
-      .len   = async_data->write_length,
-      .buf   = async_data->write_data,
-    },
-    {
-      .addr  = async_data->addr,
-      .flags = I2C_M_RD,
-      .len   = async_data->read_length,
-      .buf   = async_data->read_data,
-    }
-  };
+  status = napi_set_named_property(env, exports, "i2cTransfer", fn);
+  assert(status == napi_ok);
 
-  struct i2c_rdwr_ioctl_data rdwr = {
-    .msgs = msgs,
-    .nmsgs = 2,
-  };
-
-  // Send the ioctl command
-  int rdwr_result = ioctl(file, I2C_RDWR, &rdwr);
-  if (rdwr_result < 0) {
-    close(file);
-    async_data->error_message = strdup("Failed to transfer I2C data");
-    return;
-  }
-
-  close(file);
+  return exports;
 }
 
-void CompleteI2CTransfer(napi_env env, napi_status status, void *data)
-{
-  async_data_t *async_data = (async_data_t *)data;
+NAPI_MODULE(NODE_GYP_MODULE_NAME, Init)
 
-  if (async_data->error_message == NULL) {
-    // No error, resolve the promise with the read data
-    napi_value result;
-    status = napi_create_buffer_copy(env, async_data->read_length, async_data->read_data, NULL, &result);
-    assert(status == napi_ok);
-
-    status = napi_resolve_deferred(env, async_data->deferred, result);
-    assert(status == napi_ok);
-  } else {
-    // Error occurred, reject the promise
-    napi_value error;
-    status = napi_create_string_utf8(env, async_data->error_message, NAPI_AUTO_LENGTH, &error);
-    assert(status == napi_ok);
-
-    status = napi_reject_deferred(env, async_data->deferred, error);
-    assert(status == napi_ok);
-  }
-
-  // Clean up
-  free(async_data->bus);
-  free(async_data->write_data);
-  if (async_data->read_data)
-    free(async_data->read_data);
-  if (async_data->error_message)
-    free(async_data->error_message);
-  napi_delete_async_work(env, async_data->work);
-  free(async_data);
-}
-
-napi_value I2CTransferAsync(napi_env env, napi_callback_info info)
-{
+static napi_value I2CTransferAsync(napi_env env, napi_callback_info info) {
   napi_status status;
 
   // Parse arguments
@@ -192,18 +127,90 @@ napi_value I2CTransferAsync(napi_env env, napi_callback_info info)
   return promise;
 }
 
-napi_value Init(napi_env env, napi_value exports)
-{
-  napi_status status;
-  napi_value fn;
+static void ExecuteI2CTransfer(napi_env env, void *data) {
+  async_data_t *async_data = (async_data_t *)data;
 
-  status = napi_create_function(env, NULL, 0, I2CTransferAsync, NULL, &fn);
-  assert(status == napi_ok);
+  // Open the I2C bus
+  int file = open(async_data->bus, O_RDWR);
+  if (file < 0) {
+    async_data->error_message = strdup("Failed to open the I2C bus");
+    return;
+  }
 
-  status = napi_set_named_property(env, exports, "i2cTransfer", fn);
-  assert(status == napi_ok);
+  async_data->read_data = (uint8_t *)malloc(async_data->read_length);
+  if (async_data->read_data == NULL) {
+    close(file);
+    async_data->error_message = strdup("Memory allocation failed");
+    return;
+  }
 
-  return exports;
+  struct i2c_msg msgs[] = {
+    {
+      .addr  = async_data->addr,
+      .flags = 0,
+      .len   = async_data->write_length,
+      .buf   = async_data->write_data,
+    },
+    {
+      .addr  = async_data->addr,
+      .flags = I2C_M_RD,
+      .len   = async_data->read_length,
+      .buf   = async_data->read_data,
+    }
+  };
+
+  struct i2c_rdwr_ioctl_data rdwr = {
+    .msgs = msgs,
+    .nmsgs = 2,
+  };
+
+  // Send the ioctl command
+  int rdwr_result = ioctl(file, I2C_RDWR, &rdwr);
+  if (rdwr_result < 0) {
+    close(file);
+    async_data->error_message = strdup("Failed to transfer I2C data");
+    return;
+  }
+
+  close(file);
 }
 
-NAPI_MODULE(NODE_GYP_MODULE_NAME, Init)
+static void CompleteI2CTransfer(napi_env env, napi_status status, void *data) {
+  async_data_t *async_data = (async_data_t *)data;
+
+  if (async_data->error_message == NULL) {
+    // No error, resolve the promise with the read data
+    napi_value result;
+    status = napi_create_buffer_copy(env, async_data->read_length, async_data->read_data, NULL, &result);
+    assert(status == napi_ok);
+
+    status = napi_resolve_deferred(env, async_data->deferred, result);
+    assert(status == napi_ok);
+  } else {
+    // Error occurred, reject the promise with an appropriate Error object
+    napi_value error_message;
+    napi_value error;
+    
+    // Create the error message string
+    status = napi_create_string_utf8(env, async_data->error_message, NAPI_AUTO_LENGTH, &error_message);
+    assert(status == napi_ok);
+
+    // Create a native Error object
+    status = napi_create_error(env, NULL, error_message, &error);
+    assert(status == napi_ok);
+
+    // Reject the promise with the Error object
+    status = napi_reject_deferred(env, async_data->deferred, error);
+    assert(status == napi_ok);
+  }
+
+  // Clean up
+  free(async_data->bus);
+  free(async_data->write_data);
+  if (async_data->read_data)
+    free(async_data->read_data);
+  if (async_data->error_message)
+    free(async_data->error_message);
+  napi_delete_async_work(env, async_data->work);
+  free(async_data);
+}
